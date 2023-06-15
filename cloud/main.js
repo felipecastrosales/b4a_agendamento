@@ -1,5 +1,6 @@
 const Professional = Parse.Object.extend('Professional');
 const Specialty = Parse.Object.extend('Specialty');
+const Schedule = Parse.Object.extend('Schedule');
 
 Parse.Cloud.define('v1-sign-in', async (req) => {
 	const user = Parse.User.signIn(req.params.email.toLowerCase(), req.params.password);
@@ -74,8 +75,39 @@ Parse.Cloud.define('v1-get-professionals', async (req) => {
 	return results.map((r) => formatProfessional(r.toJSON()));
 }, {
 	fields: {
-		specialtyId: {}
+
 	},
+});
+
+Parse.Cloud.define('v1-get-scheduling-slots', async (req) => {
+	const duration = req.params.duration;
+	const professionalId = req.params.professionalId;
+	const professional = new Professional();
+	professional.id = professionalId;
+	await professional.fetch({useMasterKey: true});
+
+	const schedulingsQuery = new Parse.Query(Schedule);
+	schedulingsQuery.equalTo('professional', professional);
+	schedulingsQuery.greaterThanOrEqualTo('startDate', new Date(req.params.start));
+	schedulingsQuery.lessThanOrEqualTo('endDate', new Date(req.params.end));
+	schedulingsQuery.ascending('startDate');
+	const schedulings = await schedulingsQuery.find({useMasterKey: true});
+	const workSlots = professional.get('scheduleRule').filter((l) => l.weekday === new Date(req.params.start).getDay());
+	
+	for (const workSlot of workSlots) {
+		
+	}
+
+	return schedulings;
+}, {
+	fields: {
+		duration: {
+			required: true,
+		},
+		professionalId: {
+			required: true,
+		},
+	}
 });
 
 function formatProfessional(p) {
